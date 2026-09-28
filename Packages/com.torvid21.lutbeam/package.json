@@ -15,5 +15,6 @@
       "description": "",
       "path": "Samples"
     }
-  ]
+  ],
+  "description": "Volumetric light beams for VRChat"
 }
