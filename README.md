@@ -44,5 +44,5 @@ Raymarching volumetrics per pixel is way too expensive, I get around this by bak
 
 Somewhat similar to Latrix Laser System by OwenTheProgrammer, though theirs is far more advanced.
 
-
-
+## Authors and contributors
+See [AUTHORS.md](Packages/com.torvid21.lutbeam/AUTHORS.md)
