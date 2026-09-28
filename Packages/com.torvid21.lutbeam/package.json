@@ -1,0 +1,19 @@
+{
+  "name": "com.torvid21.lutbeam",
+  "displayName": "LUTBeam",
+  "version": "0.0.1",
+  "unity": "2022.3",
+  "vpmDependencies": {},
+  "author": {
+    "name": "Torvid",
+    "email": "",
+    "url": ""
+  },
+  "samples": [
+    {
+      "displayName": "LUTBeams Examples",
+      "description": "",
+      "path": "Samples"
+    }
+  ]
+}
