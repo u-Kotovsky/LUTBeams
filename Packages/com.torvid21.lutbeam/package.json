@@ -4,11 +4,18 @@
   "version": "0.0.1",
   "unity": "2022.3",
   "vpmDependencies": {},
-  "author": {
-    "name": "Torvid",
-    "email": "",
-    "url": ""
-  },
+  "author": [
+    {
+      "name": "Torvid",
+      "email": "",
+      "url": ""
+    },
+    {
+      "name": "Kotovsky",
+      "email": "",
+      "url": ""
+    }
+  ],
   "samples": [
     {
       "displayName": "LUTBeams Examples",
