@@ -1,24 +1,24 @@
-Shader "LUTBeam/Video"
+Shader "LUTBeam/Spin"
 {
     Properties
     {
-        [NoScaleOffset] _GoboTex ("Gobo Texture", 2D) = "white" {}
-        [NoScaleOffset] _GoboLUT ("LUT Texture", 2D) = "white" {}
-        
+        [NoScaleOffset] _GoboTex ("Gobo Texture", 2DArray) = "white" {}
+        [NoScaleOffset] _GoboLUT ("LUT Texture", 2DArray) = "white" {}
+
         [Header(Shape)]
-        _ZoomX ("_ZoomX", Range(0, 120.0)) = 45
-        _ZoomY ("_ZoomY", Range(0, 120.0)) = 30
-        _Offset ("_Offset", Range(-1,1)) = 0.0
-        _NearSizeX ("_NearSizeX", Range(0,1)) = 0.1
-        _NearSizeY ("_NearSizeY", Range(0,1)) = 0.1
+        _Zoom ("_Zoom", Range(0, 120.0)) = 45
+        _NearSize ("_NearSize", Range(0,1)) = 0.1
+        _Offset ("_Offset", Range(-1,1)) = 0.25
         _FarZ ("_FarZ", Float) = 25
         _Gobo ("Gobo Index", Integer) = 0
+        _SpinSpeed ("_SpinSpeed", Float) = 0.1
+        _Focus ("_Focus", Range(0, 1.0)) = 0
         
         [Header(Color)]
         _Color ("Color", Color) = (1, 1, 1, 1)
-        _BeamIntensity ("_BeamIntensity", Range(0, 4.0)) = 1
+        _BeamIntensity ("_BeamIntensity", Range(0, 16.0)) = 1
         _BeamFalloff ("_BeamFalloff", Range(0, 3.0)) = 1
-        _GoboIntensity ("_GoboIntensity", Range(0, 4.0)) = 1
+        _GoboIntensity ("_GoboIntensity", Range(0, 16.0)) = 1
         
         [Header(Stencil)]
         [IntRange] _StencilRef ("Ref", Range(0, 255)) = 142
@@ -29,9 +29,10 @@ Shader "LUTBeam/Video"
         [Enum(UnityEngine.Rendering.StencilOp)] _StencilFailOp ("Fail Op", Float) = 0
         [Enum(UnityEngine.Rendering.StencilOp)] _StencilZFailOp ("ZFail Op", Float) = 0
     }
+
     SubShader
     {
-        Tags {"RenderType"="Transparent" "Queue"="Transparent+304" }
+        Tags {"RenderType"="Transparent" "Queue"="Transparent+303" }
         
         Stencil
         {
@@ -59,38 +60,48 @@ Shader "LUTBeam/Video"
             #pragma multi_compile_instancing
 
             #include "UnityCG.cginc"
-            Texture2D _GoboTex;
-            Texture2D _GoboLUT;
+
+            Texture2DArray _GoboTex;
+            Texture2DArray _GoboLUT;
             float _Offset;
-            float _NearSizeX;
-            float _NearSizeY;
+            float _Zoom;
+            float _NearSize;
             float _FarZ;
-            float _ZoomX;
-            float _ZoomY;
+            float _Gobo;
             float4 _Color;
             float _GoboIntensity;
             float _BeamIntensity;
             float _BeamFalloff;
-            float _Gobo;
-            
+            float _SpinSpeed;
+            float _Focus;
+
             #define LUTBEAM_CALLBACK_PROJECTION LUTBeamCallbackProjection
             float3 LUTBeamCallbackProjection(SamplerState samp, float2 uv, float mip)
             {
-                return _GoboTex.SampleLevel(samp, float3(uv, _Gobo), mip).rgb;
+                return _GoboTex.SampleLevel(samp, float3(uv, _Gobo), mip).rrr;
             }
-
             #define LUTBEAM_CALLBACK_VOLUME LUTBeamCallbackVolume
             float3 LUTBeamCallbackVolume(SamplerState samp, float2 uv, float mip)
             {
-                return _GoboLUT.SampleLevel(samp, float3(uv, _Gobo), mip).rgb;
+                return _GoboLUT.SampleLevel(samp, float3(uv, _Gobo), mip).rrr;
             }
+            
             #define LUTBEAM_CALLBACK_VERTEX LUTBeamCallbackTransform
             float3 LUTBeamCallbackTransform(float3 vertex)
             {
-                return vertex + float3(0, 0, _Offset);
-            }
+                float spin = _Time.g * _SpinSpeed;
 
-            #include "Assets/LUTBeam/LUTBeam.cginc"
+                float3x3 spinMatrix3 = float3x3(
+                    cos(spin), -sin(spin), 0,
+                    sin(spin),  cos(spin), 0,
+                    0,         0,          1
+                );
+
+                vertex.z += _Offset;
+
+                return mul(spinMatrix3, vertex);
+            }
+            #include "Packages/com.torvid21.lutbeam/Runtime/LUTBeam.cginc"
         
             #pragma vertex vert
             #pragma fragment frag
@@ -99,6 +110,7 @@ Shader "LUTBeam/Video"
             struct appdata
             {
                 float4 vertex : POSITION;
+                float2 uv : TEXCOORD0;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
@@ -119,11 +131,11 @@ Shader "LUTBeam/Video"
                 UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
 
                 BeamSettings settings = DefaultBeamSettings();
-                settings.zoomX = _ZoomX;
-                settings.zoomY = _ZoomY;
+                settings.zoomX = _Zoom;
+                settings.zoomY = _Zoom;
                 settings.farz = _FarZ;
-                settings.nearSizeX = _NearSizeX;
-                settings.nearSizeY = _NearSizeY;
+                settings.nearSizeX = _NearSize;
+                settings.nearSizeY = _NearSize;
                 settings.color = _Color;
                 settings.brightnessVolume = _BeamIntensity;
                 settings.brightnessGobo = _GoboIntensity;
@@ -134,12 +146,11 @@ Shader "LUTBeam/Video"
                 return o;
             }
 
-
             float4 frag(v2f i) : SV_Target
             {
                 UNITY_SETUP_INSTANCE_ID(i);
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i);
-
+                
                 float3 col = LUTBeamFrag(i.beam);
                 return float4(col, 0);
             }

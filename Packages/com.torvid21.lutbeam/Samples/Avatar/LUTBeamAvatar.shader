@@ -1,4 +1,4 @@
-Shader "LUTBeam/Spin"
+Shader "LUTBeam/Avatar"
 {
     Properties
     {
@@ -6,44 +6,20 @@ Shader "LUTBeam/Spin"
         [NoScaleOffset] _GoboLUT ("LUT Texture", 2DArray) = "white" {}
 
         [Header(Shape)]
-        _Zoom ("_Zoom", Range(0, 120.0)) = 45
+        _Zoom ("_Zoom", Range(0, 120.0)) = 20
         _NearSize ("_NearSize", Range(0,1)) = 0.1
-        _Offset ("_Offset", Range(-1,1)) = 0.25
         _FarZ ("_FarZ", Float) = 25
         _Gobo ("Gobo Index", Integer) = 0
-        _SpinSpeed ("_SpinSpeed", Float) = 0.1
-        _Focus ("_Focus", Range(0, 1.0)) = 0
-        
+            
         [Header(Color)]
         _Color ("Color", Color) = (1, 1, 1, 1)
-        _BeamIntensity ("_BeamIntensity", Range(0, 16.0)) = 1
+        _BeamIntensity ("_BeamIntensity", Range(0, 8.0)) = 1
         _BeamFalloff ("_BeamFalloff", Range(0, 3.0)) = 1
-        _GoboIntensity ("_GoboIntensity", Range(0, 16.0)) = 1
-        
-        [Header(Stencil)]
-        [IntRange] _StencilRef ("Ref", Range(0, 255)) = 142
-        [IntRange] _StencilReadMask ("Read Mask", Range(0, 255)) = 255
-        [IntRange] _StencilWriteMask ("Write Mask", Range(0, 255)) = 255
-        [Enum(UnityEngine.Rendering.CompareFunction)] _StencilCompareFunction ("Compare Function", Float) = 6
-        [Enum(UnityEngine.Rendering.StencilOp)] _StencilPassOp ("Pass Op", Float) = 0
-        [Enum(UnityEngine.Rendering.StencilOp)] _StencilFailOp ("Fail Op", Float) = 0
-        [Enum(UnityEngine.Rendering.StencilOp)] _StencilZFailOp ("ZFail Op", Float) = 0
+        _GoboIntensity ("_GoboIntensity", Range(0, 8.0)) = 1
     }
-
     SubShader
     {
         Tags {"RenderType"="Transparent" "Queue"="Transparent+303" }
-        
-        Stencil
-        {
-            Ref [_StencilRef]
-            ReadMask [_StencilReadMask]
-            WriteMask [_StencilWriteMask]
-            Comp [_StencilCompareFunction]
-            Pass [_StencilPassOp]
-            Fail [_StencilFailOp]
-            ZFail [_StencilZFailOp]
-        }
 
         LOD 100
 
@@ -60,48 +36,37 @@ Shader "LUTBeam/Spin"
             #pragma multi_compile_instancing
 
             #include "UnityCG.cginc"
-
+        
             Texture2DArray _GoboTex;
             Texture2DArray _GoboLUT;
             float _Offset;
-            float _Zoom;
             float _NearSize;
             float _FarZ;
+            float _Zoom;
             float _Gobo;
             float4 _Color;
             float _GoboIntensity;
             float _BeamIntensity;
             float _BeamFalloff;
-            float _SpinSpeed;
-            float _Focus;
-
+            
+            // For projection to look right it needs a grab pass
+            // which is really bad for performance so we simply turn it off.
             #define LUTBEAM_CALLBACK_PROJECTION LUTBeamCallbackProjection
             float3 LUTBeamCallbackProjection(SamplerState samp, float2 uv, float mip)
             {
-                return _GoboTex.SampleLevel(samp, float3(uv, _Gobo), mip).rrr;
+                return 0;//_GoboTex.SampleLevel(samp, float3(uv, _Gobo), mip).rrr;
             }
             #define LUTBEAM_CALLBACK_VOLUME LUTBeamCallbackVolume
             float3 LUTBeamCallbackVolume(SamplerState samp, float2 uv, float mip)
             {
                 return _GoboLUT.SampleLevel(samp, float3(uv, _Gobo), mip).rrr;
             }
-            
-            #define LUTBEAM_CALLBACK_VERTEX LUTBeamCallbackTransform
-            float3 LUTBeamCallbackTransform(float3 vertex)
-            {
-                float spin = _Time.g * _SpinSpeed;
 
-                float3x3 spinMatrix3 = float3x3(
-                    cos(spin), -sin(spin), 0,
-                    sin(spin),  cos(spin), 0,
-                    0,         0,          1
-                );
-
-                vertex.z += _Offset;
-
-                return mul(spinMatrix3, vertex);
-            }
-            #include "Assets/LUTBeam/LUTBeam.cginc"
+            // This flag disables the grab pass
+            // and disables scene depth
+            // since a lot of worlds don't have that.
+            #define LUTBEAM_AVATAR 1
+            #include "Packages/com.torvid21.lutbeam/Runtime/LUTBeam.cginc"
         
             #pragma vertex vert
             #pragma fragment frag
@@ -152,6 +117,7 @@ Shader "LUTBeam/Spin"
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i);
                 
                 float3 col = LUTBeamFrag(i.beam);
+
                 return float4(col, 0);
             }
             ENDCG

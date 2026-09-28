@@ -56,7 +56,7 @@ Material:
     - _Falloff: 0
     - _FarZ: 32.6
     - _FarZMaxZoom: 10
-    - _Focus: 0.505
+    - _Focus: 1
     - _FocusEnabled: 0
     - _Focus_ApertureSize: 1
     - _Framing0A: 0

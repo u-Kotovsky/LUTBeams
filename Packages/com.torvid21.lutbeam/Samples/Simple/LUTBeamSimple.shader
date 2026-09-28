@@ -130,7 +130,7 @@ Shader "LUTBeam/Simple"
             }
 
 
-            #include "Assets/LUTBeam/LUTBeam.cginc"
+            #include "Packages/com.torvid21.lutbeam/Runtime/LUTBeam.cginc"
         
             #pragma vertex vert
             #pragma fragment frag

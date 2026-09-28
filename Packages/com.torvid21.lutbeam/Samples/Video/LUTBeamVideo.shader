@@ -1,25 +1,48 @@
-Shader "LUTBeam/Avatar"
+Shader "LUTBeam/Video"
 {
     Properties
     {
-        [NoScaleOffset] _GoboTex ("Gobo Texture", 2DArray) = "white" {}
-        [NoScaleOffset] _GoboLUT ("LUT Texture", 2DArray) = "white" {}
-
+        [NoScaleOffset] _GoboTex ("Gobo Texture", 2D) = "white" {}
+        [NoScaleOffset] _GoboLUT ("LUT Texture", 2D) = "white" {}
+        
         [Header(Shape)]
-        _Zoom ("_Zoom", Range(0, 120.0)) = 20
-        _NearSize ("_NearSize", Range(0,1)) = 0.1
+        _ZoomX ("_ZoomX", Range(0, 120.0)) = 45
+        _ZoomY ("_ZoomY", Range(0, 120.0)) = 30
+        _Offset ("_Offset", Range(-1,1)) = 0.0
+        _NearSizeX ("_NearSizeX", Range(0,1)) = 0.1
+        _NearSizeY ("_NearSizeY", Range(0,1)) = 0.1
         _FarZ ("_FarZ", Float) = 25
         _Gobo ("Gobo Index", Integer) = 0
-            
+        
         [Header(Color)]
         _Color ("Color", Color) = (1, 1, 1, 1)
-        _BeamIntensity ("_BeamIntensity", Range(0, 8.0)) = 1
+        _BeamIntensity ("_BeamIntensity", Range(0, 4.0)) = 1
         _BeamFalloff ("_BeamFalloff", Range(0, 3.0)) = 1
-        _GoboIntensity ("_GoboIntensity", Range(0, 8.0)) = 1
+        _GoboIntensity ("_GoboIntensity", Range(0, 4.0)) = 1
+        
+        [Header(Stencil)]
+        [IntRange] _StencilRef ("Ref", Range(0, 255)) = 142
+        [IntRange] _StencilReadMask ("Read Mask", Range(0, 255)) = 255
+        [IntRange] _StencilWriteMask ("Write Mask", Range(0, 255)) = 255
+        [Enum(UnityEngine.Rendering.CompareFunction)] _StencilCompareFunction ("Compare Function", Float) = 6
+        [Enum(UnityEngine.Rendering.StencilOp)] _StencilPassOp ("Pass Op", Float) = 0
+        [Enum(UnityEngine.Rendering.StencilOp)] _StencilFailOp ("Fail Op", Float) = 0
+        [Enum(UnityEngine.Rendering.StencilOp)] _StencilZFailOp ("ZFail Op", Float) = 0
     }
     SubShader
     {
-        Tags {"RenderType"="Transparent" "Queue"="Transparent+303" }
+        Tags {"RenderType"="Transparent" "Queue"="Transparent+304" }
+        
+        Stencil
+        {
+            Ref [_StencilRef]
+            ReadMask [_StencilReadMask]
+            WriteMask [_StencilWriteMask]
+            Comp [_StencilCompareFunction]
+            Pass [_StencilPassOp]
+            Fail [_StencilFailOp]
+            ZFail [_StencilZFailOp]
+        }
 
         LOD 100
 
@@ -36,37 +59,38 @@ Shader "LUTBeam/Avatar"
             #pragma multi_compile_instancing
 
             #include "UnityCG.cginc"
-        
-            Texture2DArray _GoboTex;
-            Texture2DArray _GoboLUT;
+            Texture2D _GoboTex;
+            Texture2D _GoboLUT;
             float _Offset;
-            float _NearSize;
+            float _NearSizeX;
+            float _NearSizeY;
             float _FarZ;
-            float _Zoom;
-            float _Gobo;
+            float _ZoomX;
+            float _ZoomY;
             float4 _Color;
             float _GoboIntensity;
             float _BeamIntensity;
             float _BeamFalloff;
+            float _Gobo;
             
-            // For projection to look right it needs a grab pass
-            // which is really bad for performance so we simply turn it off.
             #define LUTBEAM_CALLBACK_PROJECTION LUTBeamCallbackProjection
             float3 LUTBeamCallbackProjection(SamplerState samp, float2 uv, float mip)
             {
-                return 0;//_GoboTex.SampleLevel(samp, float3(uv, _Gobo), mip).rrr;
+                return _GoboTex.SampleLevel(samp, float3(uv, _Gobo), mip).rgb;
             }
+
             #define LUTBEAM_CALLBACK_VOLUME LUTBeamCallbackVolume
             float3 LUTBeamCallbackVolume(SamplerState samp, float2 uv, float mip)
             {
-                return _GoboLUT.SampleLevel(samp, float3(uv, _Gobo), mip).rrr;
+                return _GoboLUT.SampleLevel(samp, float3(uv, _Gobo), mip).rgb;
+            }
+            #define LUTBEAM_CALLBACK_VERTEX LUTBeamCallbackTransform
+            float3 LUTBeamCallbackTransform(float3 vertex)
+            {
+                return vertex + float3(0, 0, _Offset);
             }
 
-            // This flag disables the grab pass
-            // and disables scene depth
-            // since a lot of worlds don't have that.
-            #define LUTBEAM_AVATAR 1
-            #include "Assets/LUTBeam/LUTBeam.cginc"
+            #include "Packages/com.torvid21.lutbeam/Runtime/LUTBeam.cginc"
         
             #pragma vertex vert
             #pragma fragment frag
@@ -75,7 +99,6 @@ Shader "LUTBeam/Avatar"
             struct appdata
             {
                 float4 vertex : POSITION;
-                float2 uv : TEXCOORD0;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
@@ -96,11 +119,11 @@ Shader "LUTBeam/Avatar"
                 UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
 
                 BeamSettings settings = DefaultBeamSettings();
-                settings.zoomX = _Zoom;
-                settings.zoomY = _Zoom;
+                settings.zoomX = _ZoomX;
+                settings.zoomY = _ZoomY;
                 settings.farz = _FarZ;
-                settings.nearSizeX = _NearSize;
-                settings.nearSizeY = _NearSize;
+                settings.nearSizeX = _NearSizeX;
+                settings.nearSizeY = _NearSizeY;
                 settings.color = _Color;
                 settings.brightnessVolume = _BeamIntensity;
                 settings.brightnessGobo = _GoboIntensity;
@@ -111,13 +134,13 @@ Shader "LUTBeam/Avatar"
                 return o;
             }
 
+
             float4 frag(v2f i) : SV_Target
             {
                 UNITY_SETUP_INSTANCE_ID(i);
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i);
-                
-                float3 col = LUTBeamFrag(i.beam);
 
+                float3 col = LUTBeamFrag(i.beam);
                 return float4(col, 0);
             }
             ENDCG
