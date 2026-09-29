@@ -12,7 +12,8 @@ Example uses:
 <img src="Media/20260730195451477.png" />
 
 ## Installation
-Either clone the whole project, or copy-paste Assets/LUTBeam/ into your project.
+
+[Get on VCC](https://u-kotovsky.github.io/LUTBeams/)
 
 ## Usage
 1. Place a **LUTBeamManager prefab** in the scene
